@@ -9,7 +9,7 @@ public class PlayerController : MonoBehaviour
     public float movementSpeed = 5.0f;
     private Vector3 direction;
     private bool isWalk = false;
-    
+
     private float horizontal;
     private float vertical;
     [Header("Attack Config")]
@@ -20,6 +20,7 @@ public class PlayerController : MonoBehaviour
     public float hitRange = 0.5f;
     public LayerMask hitMask;
     public Collider[] hitInfo;
+    public int amountDamage;
     void Start()
     {
         characterController = GetComponent<CharacterController>();
@@ -32,37 +33,45 @@ public class PlayerController : MonoBehaviour
         Inputs();
         MoveCharacter();
         UpdateAnimations();
-            
+
     }
 
-#region Meus Metodos
+    #region Meus Metodos
 
-void Inputs()
-{
-    // Get input from keyboard
-    horizontal = Input.GetAxis("Horizontal");
-    vertical = Input.GetAxis("Vertical");
-        
-    //Attack Input
-    if (Input.GetButtonDown("Fire1") && !isAttacking)
+    void Inputs()
     {
-        Attack();
-    }
-}
+        // Get input from keyboard
+        horizontal = Input.GetAxis("Horizontal");
+        vertical = Input.GetAxis("Vertical");
 
-void Attack()
-    {        
+        //Attack Input
+        if (Input.GetButtonDown("Fire1") && !isAttacking)
+        {
+            Attack();
+        }
+    }
+
+    void Attack()
+    {
         isAttacking = true;
         anim.SetTrigger("Attack");
         fxAttack.Play();
-        
-        hitInfo = Physics.OverlapSphere(hitBox.position, hitRange, hitMask);
-    }
-void MoveCharacter()
-{
-    direction = new Vector3(horizontal, 0, vertical).normalized;
 
-    if (direction.magnitude >= 0.1f)
+       hitInfo = Physics.OverlapSphere(hitBox.position, hitRange, hitMask);
+
+        foreach (Collider c in hitInfo)
+        {
+            // Send message to the hit object to call GetHit method
+            c.gameObject.SendMessage("GetHit", amountDamage, SendMessageOptions.DontRequireReceiver);
+            
+        }
+
+    }
+    void MoveCharacter()
+    {
+        direction = new Vector3(horizontal, 0, vertical).normalized;
+
+        if (direction.magnitude >= 0.1f)
         {
             // Calculate the target angle
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
@@ -82,24 +91,24 @@ void MoveCharacter()
         // Move the player
         characterController.Move(direction * movementSpeed * Time.deltaTime);
 
-        
-}
 
-void UpdateAnimations()
-{
-    anim.SetBool("isWalk", isWalk);
-}
+    }
 
-void AttackIsDone()
-{
-    isAttacking = false;
-}
-#endregion
+    void UpdateAnimations()
+    {
+        anim.SetBool("isWalk", isWalk);
+    }
 
-void OnDrawGizmosSelected()
+    void AttackIsDone()
+    {
+        isAttacking = false;
+    }
+    #endregion
+
+    void OnDrawGizmosSelected()
     {
         if (hitBox != null) // é necessário para evitar erros caso o HitBox não esteja atribuído
-        {   
+        {
             Gizmos.color = Color.red;
             Gizmos.DrawWireSphere(hitBox.position, hitRange);
         }
