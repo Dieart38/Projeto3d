@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Projeto3d.slnx",
+    "dotnet.defaultSolution": "ProjetoZelda.slnx",
     "editor.formatOnSave": true
 }

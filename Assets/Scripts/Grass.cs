@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections;
 
 public class Grass : MonoBehaviour
-{
+{   
     [Header("Configurações de Efeito")]
     public ParticleSystem fxHit;
     public float respawnTime = 5.0f;
@@ -16,7 +16,7 @@ public class Grass : MonoBehaviour
     private bool isCut;
 
     void Start()
-    {
+    {   
         initialScale = transform.localScale;
         initialRotation = transform.rotation;
     }
@@ -51,7 +51,8 @@ public class Grass : MonoBehaviour
 
     void CutGrass()
     {
-        transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+        transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
+        // 
         if (fxHit != null) fxHit.Emit(20);
     }
 
@@ -65,7 +66,7 @@ public class Grass : MonoBehaviour
         while (timer < growDuration)
         {
             timer += Time.deltaTime;
-            transform.localScale = Vector3.Lerp(new Vector3(0.1f, 0.1f, 0.1f), initialScale, timer / growDuration);
+            transform.localScale = Vector3.Lerp(new Vector3(0.2f, 0.2f, 0.2f), initialScale, timer / growDuration);
             yield return null;
         }
 

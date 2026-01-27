@@ -5,6 +5,9 @@ public class PlayerController : MonoBehaviour
 {
     private CharacterController characterController;
     private Animator anim;
+
+    public AudioSource steepFx;
+    private AudioSource swordFx;
     [Header("Config Player")]
     public float movementSpeed = 5.0f;
     private Vector3 direction;
@@ -25,6 +28,8 @@ public class PlayerController : MonoBehaviour
     {
         characterController = GetComponent<CharacterController>();
         anim = GetComponent<Animator>();
+        swordFx = GetComponent<AudioSource>();
+        
     }
 
     // Update is called once per frame
@@ -48,6 +53,7 @@ public class PlayerController : MonoBehaviour
         if (Input.GetButtonDown("Fire1") && !isAttacking)
         {
             Attack();
+            swordFx.Play();
         }
     }
 
@@ -80,6 +86,7 @@ public class PlayerController : MonoBehaviour
             // Play walking animation if not already playing
 
             isWalk = true;
+          
 
         }
         else
@@ -90,13 +97,15 @@ public class PlayerController : MonoBehaviour
         }
         // Move the player
         characterController.Move(direction * movementSpeed * Time.deltaTime);
-
+        
 
     }
 
     void UpdateAnimations()
     {
         anim.SetBool("isWalk", isWalk);
+        
+        
     }
 
     void AttackIsDone()
