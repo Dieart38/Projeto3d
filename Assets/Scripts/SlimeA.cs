@@ -1,10 +1,12 @@
 using System.Collections;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.AI;
 
 
 public class SlimeA : MonoBehaviour
 {
+    private GameManager _GameManager;
     private Animator anim;
     public ParticleSystem fxBlood;
 
@@ -14,22 +16,41 @@ public class SlimeA : MonoBehaviour
 
     private bool isDie;
 
-    public const float idleWaitTime = 3f;
-    public const float patrolWaitTime = 5f;
-    
+
+    //public const float patrolWaitTime = 7f;
+
+    //IA do Slime
+    private NavMeshAgent agent;
+    private int idWaypoint;
+    private Vector3 destination;
+
+    private bool isWalk;
+    private bool isAlert;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
 
     void Start()
     {
-        anim = GetComponent<Animator>(); // 
-        ChangeState (enemyState.IDLE);
+        // Use FindAnyObjectByType (mais rápido que o antigo)
+        _GameManager = Object.FindAnyObjectByType<GameManager>();
+        agent = GetComponent<NavMeshAgent>();
+        anim = GetComponent<Animator>();
+        ChangeState(enemyState.IDLE);
     }
 
     // Update is called once per frame
     void Update()
     {
-        //
+        StateManager();
+        if (agent.desiredVelocity.magnitude >= 0.1f)
+        {
+            isWalk = true;
+        }
+        else
+        {
+            isWalk = false;
+        }
+        anim.SetBool("isWalk", isWalk);
     }
 
     IEnumerator Died()
@@ -48,6 +69,7 @@ public class SlimeA : MonoBehaviour
         HP -= amount;
         if (HP > 0)
         {
+            ChangeState(enemyState.FURY);
             anim.SetTrigger("GetHit");
             fxBlood.Emit(40);
         }
@@ -65,9 +87,7 @@ public class SlimeA : MonoBehaviour
     {
         switch (state)
         {
-            case enemyState.IDLE:
-                // comportamento em Idle
-                break;
+
 
             case enemyState.ALERT:
                 // comportamento em Alert
@@ -86,7 +106,13 @@ public class SlimeA : MonoBehaviour
                 break;
 
             case enemyState.FURY:
-                // comportamento em Futy
+                // comportamento em Fury
+                // Atualiza o destino para a posição ATUAL do player a cada frame
+                destination = _GameManager.player.position;
+                agent.destination = destination;
+
+                // // Opcional: Garante que o Slime não pare longe do player
+                // agent.stoppingDistance = 1.2f;
                 break;
         }
     }
@@ -100,7 +126,10 @@ public class SlimeA : MonoBehaviour
         {
             case enemyState.IDLE:
                 // comportamento em Idle
-                
+                agent.stoppingDistance = 0;
+                destination = transform.position;
+                agent.destination = destination;
+
                 StartCoroutine("IDLE");
                 break;
 
@@ -117,20 +146,40 @@ public class SlimeA : MonoBehaviour
                 break;
 
             case enemyState.PATROL:
-                // comportamento em Idle
+                // comportamento em Patrol
+                agent.stoppingDistance = 0;
+                idWaypoint = Random.Range(0, _GameManager.slimeWayPoints.Length);
+                destination = _GameManager.slimeWayPoints[idWaypoint].position;
+                agent.destination = destination;
                 StartCoroutine("PATROL");
                 break;
 
             case enemyState.FURY:
-                // comportamento em Futy
+                // comportamento em Fury
+                destination = transform.position;
+                agent.stoppingDistance = _GameManager.slimeDistanceToAttack;
+                agent.destination = destination;
                 break;
         }
     }
 
     IEnumerator IDLE()
     {
-        yield return new WaitForSeconds(idleWaitTime);
-        if(Rand() <= 50)
+        yield return new WaitForSeconds(_GameManager.slimeIdleWaitTime);
+        StayStill(50);
+
+    }
+
+    IEnumerator PATROL()
+    {
+        yield return new WaitUntil(() => agent.remainingDistance <= 0);
+        ChangeState(enemyState.IDLE);
+        StayStill(30);
+    }
+
+    void StayStill(int yes)
+    {
+        if (Rand() <= yes)
         {
             ChangeState(enemyState.IDLE);
         }
@@ -138,19 +187,11 @@ public class SlimeA : MonoBehaviour
         {
             ChangeState(enemyState.PATROL);
         }
-        
     }
-
-    IEnumerator PATROL()
-    {
-        yield return new WaitForSeconds(patrolWaitTime);
-        ChangeState(enemyState.IDLE);
-    }
-
     int Rand()
     {
-        int rand = Random.Range(0,100);
-        return rand; 
+        int rand = Random.Range(0, 100);
+        return rand;
     }
 
     #endregion

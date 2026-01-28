@@ -6,15 +6,21 @@ public enum enemyState
 }
 public class GameManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public Transform player;
+    [Header("Slime IA")]
+    public float slimeIdleWaitTime = 4f;
+    public Transform[] slimeWayPoints;
+    public float slimeDistanceToAttack = 10f;
+
+
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }
