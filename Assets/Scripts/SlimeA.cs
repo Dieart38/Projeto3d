@@ -1,4 +1,5 @@
 using System.Collections;
+using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -23,9 +24,10 @@ public class SlimeA : MonoBehaviour
     private NavMeshAgent agent;
     private int idWaypoint;
     private Vector3 destination;
-
+    private bool isPlayerVisible = false;
     private bool isWalk;
     private bool isAlert;
+    private bool isAttack;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
 
@@ -35,13 +37,13 @@ public class SlimeA : MonoBehaviour
         _GameManager = Object.FindAnyObjectByType<GameManager>();
         agent = GetComponent<NavMeshAgent>();
         anim = GetComponent<Animator>();
-        ChangeState(enemyState.IDLE);
+        //ChangeState(enemyState.IDLE);
     }
 
     // Update is called once per frame
     void Update()
     {
-        StateManager();
+
         if (agent.desiredVelocity.magnitude >= 0.1f)
         {
             isWalk = true;
@@ -51,6 +53,12 @@ public class SlimeA : MonoBehaviour
             isWalk = false;
         }
         anim.SetBool("isWalk", isWalk);
+        anim.SetBool("isAlert", isAlert);
+    }
+
+    void LateUpdate()
+    {
+        StateManager();
     }
 
     IEnumerator Died()
@@ -60,6 +68,32 @@ public class SlimeA : MonoBehaviour
         Destroy(this.gameObject);
 
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag == "Player")
+        {
+            isPlayerVisible = true;
+
+            if (state == enemyState.IDLE || state == enemyState.PATROL)
+            {
+                ChangeState(enemyState.ALERT);
+            }
+
+
+        }
+    }
+
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.tag == "Player")
+        {
+            isPlayerVisible = false;
+        }
+
+    }
+    // MEUS MÉTODOS
     #region Meus Metodos
 
     void GetHit(int amount)
@@ -93,12 +127,16 @@ public class SlimeA : MonoBehaviour
                 // comportamento em Alert
                 break;
 
-            case enemyState.EXPLORE:
-                // comportamento em Explore
-                break;
 
             case enemyState.FOLLOW:
                 // comportamento em Follow
+                destination = _GameManager.player.position;
+                agent.destination = destination;
+                if (agent.remainingDistance <= agent.stoppingDistance)
+                {
+                    Attack();
+                }
+
                 break;
 
             case enemyState.PATROL:
@@ -110,6 +148,10 @@ public class SlimeA : MonoBehaviour
                 // Atualiza o destino para a posição ATUAL do player a cada frame
                 destination = _GameManager.player.position;
                 agent.destination = destination;
+                if (agent.remainingDistance <= agent.stoppingDistance)
+                {
+                    Attack();
+                }
 
                 // // Opcional: Garante que o Slime não pare longe do player
                 // agent.stoppingDistance = 1.2f;
@@ -122,6 +164,8 @@ public class SlimeA : MonoBehaviour
         print(newState);
         StopAllCoroutines(); // encerra todas coroutines para não dar erro 
         state = newState;
+        isAlert = false;
+
         switch (state)
         {
             case enemyState.IDLE:
@@ -135,15 +179,16 @@ public class SlimeA : MonoBehaviour
 
             case enemyState.ALERT:
                 // comportamento em Alert
+                agent.stoppingDistance = 0;
+                destination = transform.position;
+                agent.destination = destination;
+                isAlert = true;
+                StartCoroutine("ALERT");
+
                 break;
 
-            case enemyState.EXPLORE:
-                // comportamento em Explore
-                break;
 
-            case enemyState.FOLLOW:
-                // comportamento em Follow
-                break;
+
 
             case enemyState.PATROL:
                 // comportamento em Patrol
@@ -152,6 +197,11 @@ public class SlimeA : MonoBehaviour
                 destination = _GameManager.slimeWayPoints[idWaypoint].position;
                 agent.destination = destination;
                 StartCoroutine("PATROL");
+
+                break;
+            case enemyState.FOLLOW:
+                // comportamento em Follow
+                agent.stoppingDistance = _GameManager.slimeDistanceToAttack;
                 break;
 
             case enemyState.FURY:
@@ -177,6 +227,27 @@ public class SlimeA : MonoBehaviour
         StayStill(30);
     }
 
+    IEnumerator ALERT()
+
+    {
+        yield return new WaitForSeconds(_GameManager.slimeAlertTime);
+
+        if (isPlayerVisible == true)
+        {
+            ChangeState(enemyState.FOLLOW);
+        }
+        else
+        {
+            StayStill(10);
+        }
+    }
+
+    IEnumerator ATTACK()
+    {
+        yield return new WaitForSeconds(_GameManager.slimeAttackDelay);
+        isAttack = false;
+    }
+
     void StayStill(int yes)
     {
         if (Rand() <= yes)
@@ -194,5 +265,22 @@ public class SlimeA : MonoBehaviour
         return rand;
     }
 
+    void Attack()
+    {
+        // Se já estiver atacando ou morto, não faz nada
+        if (isAttack || isDie) return;
+
+        isAttack = true;
+        anim.SetTrigger("Attack");
+
+        // Se você não usa Animation Event, chame o delay aqui:
+        // AttackIsDone();
+
+    }
+
+    void AttackIsDone()
+    {
+        StartCoroutine("ATTACK");
+    }
     #endregion
 }
